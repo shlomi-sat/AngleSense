@@ -2,21 +2,21 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <!-- Responsive meta tag for mobile devices -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Orientation Comparison Simulator</title>
   <!-- Load Chart.js from CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    /* Base styling */
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
-      font-size: 16px;
-      line-height: 1.5;
     }
-    
-    /* Responsive container for explanation and summary areas */
+    .chart-container {
+      margin-top: 30px;
+    }
+    canvas {
+      max-width: 800px;
+      max-height: 400px;
+    }
     #scenarioExplanation,
     #algorithmExplanation,
     #summaryTableContainer {
@@ -24,57 +24,31 @@
       padding: 10px;
       margin-top: 20px;
       border: 1px solid #ddd;
-      max-width: 820px;
-      width: 100%;
-      box-sizing: border-box;
+      width: 820px;
     }
-    
-    /* Chart container styling */
-    .chart-container {
-      margin-top: 30px;
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    table, th, td {
+      border: 1px solid black;
+    }
+    th, td {
+      padding: 8px;
+      text-align: center;
+    }
+    pre {
+      background-color: #eee;
       padding: 10px;
-      box-sizing: border-box;
-      max-width: 820px;
-      width: 100%;
-    }
-    
-    canvas {
-      width: 100% !important;
-      height: auto !important;
-    }
-    
-    /* Styling for scenario selection area */
-    .scenario-select-container {
-      max-width: 820px;
-      width: 100%;
-      box-sizing: border-box;
-      margin-bottom: 20px;
-    }
-    .scenario-select-container label,
-    .scenario-select-container select,
-    .scenario-select-container button {
-      font-size: 18px;
-    }
-    
-    /* Media query for smaller screens */
-    @media (max-width: 600px) {
-      body {
-        margin: 10px;
-        font-size: 16px;
-      }
-      .scenario-select-container label,
-      .scenario-select-container select,
-      .scenario-select-container button {
-        font-size: 16px;
-      }
+      overflow-x: auto;
     }
   </style>
 </head>
 <body>
   <h1>Orientation Comparison Simulator</h1>
   
-  <!-- Scenario Selection (the explanation of the scenario is shown separately) -->
-  <div class="scenario-select-container">
+  <!-- Scenario Selection (Only scenario names are shown) -->
+  <div>
     <label for="scenarioSelect">Select Scenario:</label>
     <select id="scenarioSelect">
       <option value="1">Straight and Level Flight</option>
@@ -96,19 +70,19 @@
     <button id="runButton">Run Simulation</button>
   </div>
   
-  <!-- Scenario Explanation (displayed in a dedicated window) -->
+  <!-- Scenario Explanation (Displayed in a separate window) -->
   <div id="scenarioExplanation"></div>
   
   <!-- Pitch Chart -->
   <div class="chart-container">
     <h2>Pitch Comparison</h2>
-    <canvas id="chartPitch"></canvas>
+    <canvas id="chartPitch" width="800" height="400"></canvas>
   </div>
   
   <!-- Roll Chart -->
   <div class="chart-container">
     <h2>Roll Comparison</h2>
-    <canvas id="chartRoll"></canvas>
+    <canvas id="chartRoll" width="800" height="400"></canvas>
   </div>
   
   <!-- Summary Table -->
@@ -119,6 +93,11 @@
   
   <script>
     /***************** Scenarios Definition *****************/
+    // Each scenario defines:
+    // - A name and a detailed explanation (shown only in the explanation window).
+    // - A simulation function that returns the true pitch and roll (in degrees) for a given time t (seconds).
+    // - Noise factors for each algorithm.
+    // Note: Sensor data is simulated from 3-axis accelerometers and 3-axis gyroscopes.
     const scenarios = {
       "1": {
         name: "Straight and Level Flight",
@@ -190,7 +169,7 @@
       },
       "8": {
         name: "Wind Shear",
-        explanation: "Around 300 sec, pitch ramps to 5° in 10 sec then returns to 0°; roll remains 0°.",
+        explanation: "Around 300 sec, pitch ramps to 5° in 10 sec then back to 0°; roll remains 0°.",
         simulation: function(t) { 
           let pitch = 0;
           if(t >= 290 && t <= 310) {
@@ -203,7 +182,7 @@
       },
       "9": {
         name: "Complex Maneuver",
-        explanation: "Phases: 0–150 sec: straight flight; 150–250 sec: take-off (pitch up to 10°); 250–350 sec: level flight with left bank reaching -20° roll; 350–450 sec: transition from left to right turn (pitch from 10° to 0° and roll from -20° to +20°); 450–600 sec: straight flight.",
+        explanation: "Phases: 0–150 sec: straight flight; 150–250 sec: take-off (pitch up to 10°); 250–350 sec: level flight with left bank reaching –20° roll; 350–450 sec: transition from left to right turn (pitch from 10° to 0° and roll from –20° to +20°); 450–600 sec: straight flight.",
         simulation: function(t) {
           let pitch = 0, roll = 0;
           if(t < 150) { pitch = 0; roll = 0; }
@@ -232,7 +211,7 @@
       },
       "11": {
         name: "Rapid Acceleration Maneuver",
-        explanation: "For t < 100 sec, pitch = 0.001·t² (e.g., at t=50 sec, pitch≈2.5°; at t=100 sec, pitch=10°), then constant at 10°. Roll remains 0°. Instantaneous pitch acceleration is 0.002·t (≈0.2°/sec at t=100).",
+        explanation: "For t < 100 sec, pitch = 0.001·t² (e.g., t = 50 sec yields ≈2.5°, t = 100 sec yields 10°), then constant at 10°. Roll remains 0°. Instantaneous pitch acceleration is 0.002·t (≈0.2°/sec at t = 100).",
         simulation: function(t) {
           let pitch = (t < 100) ? 0.001 * t * t : 10;
           return { pitch: pitch, roll: 0 };
@@ -242,7 +221,7 @@
       },
       "12": {
         name: "Gradual Acceleration Maneuver",
-        explanation: "For t < 200 sec, pitch = 0.0005·t² (e.g., at t=100 sec, pitch≈5°; at t=200 sec, pitch=20°), then constant at 20°. Roll remains 0°. Instantaneous pitch acceleration is 0.001·t (≈0.2°/sec at t=200).",
+        explanation: "For t < 200 sec, pitch = 0.0005·t² (e.g., t = 100 sec yields ≈5°, t = 200 sec yields 20°), then constant at 20°. Roll remains 0°. Instantaneous pitch acceleration is 0.001·t (≈0.2°/sec at t = 200).",
         simulation: function(t) {
           let pitch = (t < 200) ? 0.0005 * t * t : 20;
           return { pitch: pitch, roll: 0 };
@@ -352,33 +331,35 @@
         const ax = -g * Math.sin(pitchRad) + noiseAccX;
         const ay = g * Math.sin(rollRad) * Math.cos(pitchRad) + noiseAccY;
         const az = g * Math.cos(pitchRad) * Math.cos(rollRad) + noiseAccZ;
-        // Compute accelerometer-based estimates
+        // Calculate accelerometer-based estimates:
+        // Although the accelerometer measures linear acceleration,
+        // we assume gravity is the only significant acceleration.
+        // Therefore, we estimate:
+        // pitch_acc = arctan2(-ax, sqrt(ay² + az²)) and
+        // roll_acc  = arctan2(ay, az), both converted to degrees.
         const pitchAcc = Math.atan2(-ax, Math.sqrt(ay * ay + az * az)) * (180 / Math.PI);
         const rollAcc  = Math.atan2(ay, az) * (180 / Math.PI);
 
-        // Simulate 3-axis gyroscope readings and integrate them
+        // Simulate 3-axis gyroscope readings (angular rate in deg/s) and integrate over time
         let gyroPitch = 0, gyroRoll = 0;
         if (t === 0) {
           integratedGyroPitch = trueValues.pitch;
           integratedGyroRoll  = trueValues.roll;
           prevTruePitch = trueValues.pitch;
-          prevTrueRoll = trueValues.roll;
+          prevTrueRoll  = trueValues.roll;
         } else {
           gyroPitch = (trueValues.pitch - prevTruePitch) + ((Math.random() * 2 - 1) * baseGyroNoise);
           gyroRoll  = (trueValues.roll - prevTrueRoll) + ((Math.random() * 2 - 1) * baseGyroNoise);
           integratedGyroPitch += gyroPitch * dt;
           integratedGyroRoll  += gyroRoll * dt;
           prevTruePitch = trueValues.pitch;
-          prevTrueRoll = trueValues.roll;
+          prevTrueRoll  = trueValues.roll;
         }
 
         /************ Algorithm 1: Basic Moving Average Filter (BMAF) ************/
         bufferPitch1.push(pitchAcc);
         bufferRoll1.push(rollAcc);
-        if (bufferPitch1.length > windowSize) {
-          bufferPitch1.shift();
-          bufferRoll1.shift();
-        }
+        if (bufferPitch1.length > windowSize) { bufferPitch1.shift(); bufferRoll1.shift(); }
         const avgPitch1 = bufferPitch1.reduce((a, b) => a + b, 0) / bufferPitch1.length;
         const avgRoll1  = bufferRoll1.reduce((a, b) => a + b, 0) / bufferRoll1.length;
         const finalEstPitch1 = avgPitch1 + ((Math.random() * 2 - 1) * noise.pitchAlg1);
@@ -387,24 +368,17 @@
         rollAlg1.push(finalEstRoll1);
 
         /************ Algorithm 2: Complementary Filter (CF) ************/
-        if (prevEstPitch2 === null) { 
-          prevEstPitch2 = pitchAcc; 
-          prevEstRoll2 = rollAcc; 
-        }
+        if (prevEstPitch2 === null) { prevEstPitch2 = pitchAcc; prevEstRoll2 = rollAcc; }
         const compPitch = alpha * (prevEstPitch2 + gyroPitch * dt) + (1 - alpha) * pitchAcc;
-        const compRoll  = alpha * (prevEstRoll2 + gyroRoll * dt) + (1 - alpha) * rollAcc;
-        prevEstPitch2 = compPitch;
-        prevEstRoll2 = compRoll;
+        const compRoll  = alpha * (prevEstRoll2  + gyroRoll  * dt) + (1 - alpha) * rollAcc;
+        prevEstPitch2 = compPitch; prevEstRoll2 = compRoll;
         const finalEstPitch2 = compPitch + ((Math.random() * 2 - 1) * noise.pitchAlg2);
         const finalEstRoll2  = compRoll  + ((Math.random() * 2 - 1) * noise.rollAlg2);
         pitchAlg2.push(finalEstPitch2);
         rollAlg2.push(finalEstRoll2);
 
         /************ Algorithm 3: Kalman Filter Sensor Fusion (KFSF) ************/
-        if (estPitch3 === null) { 
-          estPitch3 = pitchAcc; 
-          estRoll3 = rollAcc; 
-        }
+        if (estPitch3 === null) { estPitch3 = pitchAcc; estRoll3 = rollAcc; }
         const P_pred_pitch = P_pitch3 + Q_val;
         const K_pitch = P_pred_pitch / (P_pred_pitch + R_val_pitch);
         estPitch3 = estPitch3 + K_pitch * (pitchAcc - estPitch3);
@@ -419,11 +393,11 @@
         rollAlg3.push(finalEstRoll3);
 
         /************ Algorithm 4: Weighted Fusion Filter (WFF) ************/
-        // Calculate the norm of the accelerometer vector to assess its reliability.
+        // Calculate the norm of the accelerometer vector:
         const normAcc = Math.sqrt(ax * ax + ay * ay + az * az);
-        // Compute weight: if normAcc is close to g, the accelerometer reading is reliable.
+        // Compute weight: a value near 1 means the accelerometer reading is reliable.
         const weightAcc = Math.max(0, Math.min(1, 1 - Math.abs(normAcc - g) / g));
-        // Fuse the accelerometer-based estimate with the integrated gyroscope estimate.
+        // Fuse the accelerometer-based estimate with the integrated gyroscope estimate:
         const fusionPitch = weightAcc * pitchAcc + (1 - weightAcc) * integratedGyroPitch;
         const fusionRoll  = weightAcc * rollAcc  + (1 - weightAcc) * integratedGyroRoll;
         const finalEstPitch4 = fusionPitch + ((Math.random() * 2 - 1) * noise.pitchAlg4);
@@ -492,37 +466,34 @@
       const algorithmHTML = `
         <h3>Algorithm Explanations</h3>
         <h4>Sensor Data Overview:</h4>
-        <p>Each algorithm uses simulated 3-axis accelerometer and 3-axis gyroscope data. The accelerometer measures linear acceleration along the X, Y, and Z axes (ax, ay, az). Although it does not directly measure angles, we assume that gravity (≈9.81 m/s²) is the dominant acceleration. Thus, we derive an estimate for pitch as:</p>
+        <p>Each algorithm uses simulated 3-axis accelerometer and 3-axis gyroscope data.</p>
+        <p>The accelerometer measures linear acceleration along each axis (ax, ay, az). While it does not directly measure angles, by assuming that the primary acceleration is due to gravity (≈9.81 m/s²), we derive an estimate for the pitch angle:</p>
         <pre>
 pitch_acc = arctan2(-ax, sqrt(ay² + az²))   (in degrees)
 roll_acc  = arctan2(ay, az)                   (in degrees)
         </pre>
-        <p>The gyroscope measures angular rates (in deg/s) about each axis, which are integrated over time (Δt = 1 sec) to obtain changes in orientation.</p>
+        <p>The gyroscope measures angular rates (deg/s) about each axis, which are integrated over time (Δt = 1 sec) to obtain changes in orientation.</p>
         
         <h4>Algorithm 1: Basic Moving Average Filter (BMAF)</h4>
         <ol>
-          <li>Calculate pitch_acc and roll_acc from the accelerometer data.</li>
-          <li>Maintain a moving window of the last 5 samples and compute their average.</li>
+          <li>Compute the accelerometer-based estimates: pitch_acc and roll_acc.</li>
+          <li>Store the last 5 samples in a moving window and compute their average.</li>
           <li>Add a small random noise to simulate sensor imperfections.</li>
         </ol>
         
         <h4>Algorithm 2: Complementary Filter (CF)</h4>
         <ol>
-          <li>Calculate pitch_acc and roll_acc.</li>
-          <li>Integrate the gyroscope readings over time to obtain gyro-based estimates.</li>
-          <li>Fuse these estimates using the equation:
+          <li>Compute pitch_acc and roll_acc.</li>
+          <li>Integrate the gyroscope readings to obtain gyro-based estimates.</li>
+          <li>Fuse the estimates using:
               <br>θ_est(t) = 0.98 · (θ_est(t–1) + gyro·Δt) + 0.02 · pitch_acc(t)
           </li>
         </ol>
         
         <h4>Algorithm 3: Kalman Filter Sensor Fusion (KFSF)</h4>
         <ol>
-          <li>Prediction: Update the error covariance:
-              <br>P_pred = P_previous + Q
-          </li>
-          <li>Update: Compute Kalman gain:
-              <br>K = P_pred / (P_pred + R)
-              <br>Then update the estimate:
+          <li>Prediction: Update error covariance: P_pred = P_previous + Q.</li>
+          <li>Update: Compute Kalman gain: K = P_pred / (P_pred + R), then update the estimate:
               <br>θ_est = previous_estimate + K · (pitch_acc – previous_estimate)
               <br>and update P: P = (1 – K) · P_pred.
           </li>
@@ -531,20 +502,16 @@ roll_acc  = arctan2(ay, az)                   (in degrees)
         
         <h4>Algorithm 4: Weighted Fusion Filter (WFF)</h4>
         <ol>
-          <li>Calculate pitch_acc and roll_acc.</li>
-          <li>Compute the norm of the accelerometer vector:
-              <br>norm = sqrt(ax² + ay² + az²)
-          </li>
-          <li>Determine a weight:
-              <br>weight = 1 – |norm – g| / g
-              <br>(A weight close to 1 indicates that the accelerometer reading is reliable.)</li>
+          <li>Compute pitch_acc and roll_acc from accelerometer data.</li>
+          <li>Calculate the norm of the accelerometer vector: norm = sqrt(ax² + ay² + az²).</li>
+          <li>Determine a weight: weight = 1 – |norm – g| / g. A value near 1 indicates a reliable accelerometer reading.</li>
           <li>Integrate the gyroscope readings over time to obtain gyro-based estimates.</li>
-          <li>Fuse the two estimates:
+          <li>Fuse the estimates:
               <br>pitch_est = weight · pitch_acc + (1 – weight) · (integrated gyro pitch)
-              <br>roll_est  = weight · roll_acc  + (1 – weight) · (integrated gyro roll)
+              <br>roll_est  = weight · roll_acc + (1 – weight) · (integrated gyro roll)
           </li>
         </ol>
-        <p>This method explicitly uses the accelerometer’s measurement of acceleration along each axis by computing its norm, which serves as an indicator of reliability.</p>
+        <p>This method explicitly uses each axis measurement by computing the norm of the accelerometer vector to assess reliability.</p>
       `;
       document.getElementById('algorithmExplanation').innerHTML = algorithmHTML;
     }
